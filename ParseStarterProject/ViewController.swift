@@ -21,6 +21,10 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
       case Body = "body"
     }
     
+    
+    /**
+     * ビューのロードイベント.
+     */
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -31,31 +35,25 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
         fetchTweets(filterText.text)
         
     }
-
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
-    }
     
     /**
      * フィルタ入力値変更イベント.
      */
     @IBAction func onEdigintChanged(sender: AnyObject) {
-        fetchTweets(filterText.text)
+        fetchTweets(filterText.text) // つぶやき一覧を再取得
     }
     
+    
     /**
-     * つぶやく.
+     * つぶやくボタンの押下イベント.
      */
-    @IBAction func tweet(sender: AnyObject) {
-        
-        var tweetObject = PFObject(className: "Tweet")
-        tweetObject.setObject(tweetText.text, forKey: Tweet.Body.rawValue)
-        // save
-        tweetObject.saveInBackgroundWithBlock { (Bool, NSError) -> Void in
-            self.tweetText.text = nil
-            self.fetchTweets(self.filterText.text)
-        }
+    @IBAction func onClickTweet(sender: AnyObject) {
+        TweetService.tweet(self.tweetText.text,
+            { (Bool, NSError) -> Void in               // 保存完了時の動作
+                self.tweetText.text = nil              // つぶやいた言葉をクリアする
+                self.fetchTweets(self.filterText.text) // つぶやき一覧を取得
+            }
+        )
     }
     
     
@@ -66,14 +64,14 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
         return tweets.count
     }
     
+    
     /**
      * セルの内容を変更する.
      */
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell: UITableViewCell = UITableViewCell(style: UITableViewCellStyle.Subtitle, reuseIdentifier: "Cell")
-        
         let tweetObject: PFObject = tweets[indexPath.row] as PFObject
-        let body = tweetObject.objectForKey(Tweet.Body.rawValue) as? String
+        let body = tweetObject.objectForKey(Tweet.Body.rawValue) as String
         cell.textLabel?.text = body
         return cell
     }
@@ -83,13 +81,12 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
      * つぶやきを取得する.
      */
     func fetchTweets(query: String) {
-        let tweetQuery = PFQuery(className: "Tweet")
-        tweetQuery.whereKey(Tweet.Body.rawValue, containsString: query)
-        tweetQuery.findObjectsInBackgroundWithBlock {
-            (objects:[AnyObject]!, error:NSError!) -> Void in
-            self.tweets = objects
-            self.tableView.reloadData()
-        }
+        TweetService.fetchTweets(query,
+            { (objects:[AnyObject]!, error:NSError!) -> Void in
+                self.tweets = objects       // つぶやきを取得したつぶやきに更新
+                self.tableView.reloadData() // テーブルビューをリロード
+            }
+        )
     }
     
 }
